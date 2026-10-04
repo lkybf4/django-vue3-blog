@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  db:
+    image: postgres:16-alpine
+    container_name: blog_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-blog_db}
+      POSTGRES_USER: ${DB_USER:-blog_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-blog_password}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-blog_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: blog_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django 后端
+  backend:
+    build: .
+    container_name: blog_backend
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=blog_backend.settings_production
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-blog_db}
+      - DB_USER=${DB_USER:-blog_user}
+      - DB_PASSWORD=${DB_PASSWORD:-blog_password}
+      - REDIS_URL=redis://redis:6379/1
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-your-secret-key-change-in-production}
+      - DEBUG=False
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Vue3 前端（开发环境）
+  frontend:
+    image: node:20-alpine
+    container_name: blog_frontend
+    working_dir: /app/blog-frontend
+    volumes:
+      - ./blog-frontend:/app/blog-frontend
+      - frontend_node_modules:/app/blog-frontend/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  frontend_node_modules:
