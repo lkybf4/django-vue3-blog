@@ -74,7 +74,7 @@ const handleOAuth = async (provider) => {
             :disabled="!!oauthLoading"
             @click="handleOAuth('github')"
           >
-            {{ oauthLoading === 'github' ? '跳转中...' : '🐙 GitHub 登录' }}
+            {{ oauthLoading === 'github' ? '跳转中...' : '💥 GitHub 登录' }}
           </button>
           <button
             type="button"

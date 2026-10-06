@@ -5,8 +5,18 @@ import { currentTheme, toggleTheme } from '@/stores/theme'
 import ReadingProgress from '@/components/ReadingProgress.vue'
 import { getSiteConfig } from '@/api/site'
 import { useSeo } from '@/composables/useSeo'
+import { useAuthStore } from '@/stores/auth'
+import { computed } from 'vue' 
 
 const router = useRouter()
+// 用户认证 store
+const authStore = useAuthStore()
+
+// 退出登录
+const handleLogout = () => {
+  authStore.logout()      // 清空 token 和 user
+  router.push('/login')   // 跳转到登录页
+}
 const searchQuery = ref('')
 const showSearch = ref(false)
 const showMenu = ref(false)
@@ -116,6 +126,28 @@ const closeMenu = () => {
           <router-link to="/about" class="nav-link" @click="closeMenu">
             <span>关于</span>
           </router-link>
+          <!-- ========================================
+     用户登录 / 用户信息区块
+     未登录：显示"登录""注册"按钮
+     已登录：显示用户名 + 退出按钮
+     ======================================== -->
+<template v-if="!authStore.isAuthenticated">
+  <router-link to="/login" class="nav-link" @click="closeMenu">
+    <span>登录</span>
+  </router-link>
+  <router-link to="/register" class="nav-link nav-link-register" @click="closeMenu">
+    <span>注册</span>
+  </router-link>
+</template>
+
+<template v-else>
+  <router-link to="/profile" class="nav-link nav-link-user" @click="closeMenu">
+    <span>👤 {{ authStore.user?.username || '用户' }}</span>
+  </router-link>
+  <button @click="handleLogout" class="nav-link nav-link-logout">
+    退出
+  </button>
+</template>
           <div class="nav-actions">
             <button @click="toggleTheme" class="action-btn" :title="currentTheme === 'light' ? '切换暗色' : '切换亮色'">
               <span class="action-icon">{{ currentTheme === 'light' ? '🌙' : '☀️' }}</span>
@@ -237,6 +269,52 @@ const closeMenu = () => {
 </style>
 
 <style scoped>
+/* ============ 用户登录区块样式 ============ */
+
+/* 用户名显示 */
+.nav-link-user {
+  color: var(--text-color);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.nav-link-user:hover {
+  color: var(--primary-color);
+  background: var(--tag-bg);
+}
+
+/* 注册按钮（带高亮） */
+.nav-link-register {
+  background: var(--primary-color);
+  color: white;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.nav-link-register:hover {
+  background: var(--secondary-color);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* 退出按钮（看起来像链接，实际是 button） */
+.nav-link-logout {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary-color);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.25s ease;
+}
+
+.nav-link-logout:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
 .navbar {
   position: fixed;
   top: 0;

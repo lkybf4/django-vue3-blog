@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
+// 懒加载包装函数
 const lazyLoad = (importFn) => {
   return () => {
     return importFn().catch((error) => {
@@ -99,7 +99,57 @@ const router = createRouter({
       name: 'write',
       component: lazyLoad(() => import('@/views/GuestEditorView.vue')),
     },
+    {
+      path: '/login',
+      name: 'login',
+      component: lazyLoad(() => import('@/views/LoginView.vue')),
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: lazyLoad(() => import('@/views/RegisterView.vue')),
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: lazyLoad(() => import('@/views/ProfileView.vue')),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/editor',
+      name: 'editor',
+      component: lazyLoad(() => import('@/views/EditorView.vue')),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/editor/:id',
+      name: 'editor-edit',
+      component: lazyLoad(() => import('@/views/EditorView.vue')),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/oauth/callback',
+      name: 'oauth-callback',
+      component: lazyLoad(() => import('@/views/OAuthCallbackView.vue')),
+    },
   ],
+})
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('access_token')
+  if (to.meta.requiresAuth && !token) {
+    next({
+      path: '/login',
+      query: { redirect: to.fullPath },
+    })
+    return
+  }
+  if (to.meta.guestOnly && token) {
+    next('/')
+    return
+  }
+  next()
 })
 
 router.onError((error, to) => {
