@@ -2,8 +2,19 @@ import math
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Article, Category, Tag, Series
+from rest_framework import serializers
+from .models import Article, Category, Tag, Series
 
 
+class EmptyStringToNullImageField(serializers.ImageField):
+    """
+    自定义 ImageField：把空字符串转成 None
+    DRF 原生 ImageField 不接受空字符串，但前端常传 "" 表示"没有图片"
+    """
+    def to_internal_value(self, data):
+        if data == '' or data is None:
+            return None
+        return super().to_internal_value(data)
 class ExternalImageField(serializers.Field):
     """自定义字段，处理外部URL和本地图片的混合情况"""
     def to_representation(self, value):
@@ -96,7 +107,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     series = SeriesListSerializer(read_only=True)
-    cover = ExternalImageField(required=False, allow_null=True)
+    cover = EmptyStringToNullImageField(required=False, allow_null=True)
     reading_time = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
 
@@ -125,6 +136,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
 
 class ArticleCreateSerializer(serializers.ModelSerializer):
+    cover=EmptyStringToNullImageField(required=False,allow_null=True)
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), source='category', required=False, allow_null=True
     )
@@ -141,6 +153,7 @@ class ArticleCreateSerializer(serializers.ModelSerializer):
             'title', 'slug', 'content', 'content_html', 'summary', 'cover',
             'status', 'is_top', 'nickname', 'category_id', 'tag_ids', 'series_id'
         ]
+        read_only_fields=['content_html','slug','summary']
 
     def create(self, validated_data):
         request = self.context.get('request')

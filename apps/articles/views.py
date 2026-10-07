@@ -130,9 +130,12 @@ class ArticleCreateView(generics.CreateAPIView):
     permission_classes = []  # 允许任何人发布文章，包括匿名用户
 
     def perform_create(self, serializer):
-        # 清除缓存
-        cache.delete_pattern('article_list:*')
+        # 应该先保存到数据库再清理缓存
         serializer.save()
+        try:
+            cache.delete_pattern({'articl_list:*'}) 
+        except AttributeError:
+            cache.clear()
 
 
 class ArticleUpdateView(generics.UpdateAPIView):
@@ -141,9 +144,14 @@ class ArticleUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsAuthorOrStaff]
 
     def perform_update(self, serializer):
-        instance = self.get_object()
-        cache.delete(f'article_detail:{instance.id}')
+        instance = self.get_object().id
         serializer.save()
+        cache.delete(f'article_detail:{instance.id}')
+        try:
+            cache.delete_pattern({'article_list:*'})
+        except AttributeError:
+            cache.clear()
+        
 
 
 class ArticleDeleteView(generics.DestroyAPIView):
@@ -151,5 +159,11 @@ class ArticleDeleteView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated, IsAuthorOrStaff]
 
     def perform_destroy(self, instance):
-        cache.delete(f'article_detail:{instance.id}')
+        instance_id=instance.id
         instance.delete()
+        cache.delete(f'article_detail:{instance_id}')
+        try:
+            cache.delete_pattern({'article_list:*'})
+        except AttributeError:
+            cache.clear()
+     
