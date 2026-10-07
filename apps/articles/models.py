@@ -175,7 +175,7 @@ class Article(models.Model):
         if not self.summary and self.content:
             # 去除 Markdown 标记
             text_content = bleach.clean(self.content, strip=True)
-            self.summary = text_content[:200] + '...' if len(text_content) > 200 else text_content
+            self.summary = text_content[:197] + '...' if len(text_content) > 200 else text_content
 
         super().save(*args, **kwargs)
         
