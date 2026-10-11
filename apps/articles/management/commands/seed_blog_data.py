@@ -38,7 +38,7 @@ class Command(BaseCommand):
         SiteConfig.objects.update_or_create(
             pk=1,
             defaults={
-                'site_name': 'TendCode',
+                'site_name': 'self-blog',
                 'site_description': '一个使用 Django + Vue3 搭建的个人技术博客，分享编程学习心得',
                 'site_keywords': 'Python,Django,Vue3,博客,技术分享,容器化,监控',
                 'author_name': '技术博主',
