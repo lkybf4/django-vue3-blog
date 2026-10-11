@@ -1,7 +1,7 @@
+[![Tests](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml/badge.svg)](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml)
 # 个人博客系统
 
 基于 Django 5 + DRF + Vue 3 的前后端分离博客系统。
-![Tests](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml/badge.svg)
 **在线demo**：
 ## 功能
 
