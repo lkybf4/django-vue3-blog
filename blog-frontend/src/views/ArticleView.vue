@@ -5,11 +5,13 @@ import { getArticle, getArticles } from '@/api/article'
 import { getComments, createComment, deleteComment } from '@/api/comment'
 import { useSeo } from '@/composables/useSeo'
 import { useCommentWebSocket } from '@/composables/useCommentWebSocket'
+import {useAuthStore} from '@/stores/auth'
+import api from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const { setSeo } = useSeo()
-
+const authStore =useAuthStore()
 const article = ref(null)
 const comments = ref([])
 const relatedArticles = ref([])
@@ -136,6 +138,16 @@ const submitComment = async () => {
     alert('发表评论失败')
   }
 }
+   onMounted(async () => {
+  loading.value = true
+  await Promise.all([loadArticle(), loadComments()])
+  if (article.value) {
+    await loadRelatedArticles()
+    setupCodeBlocks()
+  }
+  loading.value = false
+  window.addEventListener('scroll', handleTocScroll)
+})
 
 const onCommentInput = () => {
   if (connected.value) sendTyping(true)
@@ -181,6 +193,30 @@ const scrollToHeading = (id) => {
 
 const goToArticle = (id) => {
   router.push(`/article/${id}`)
+}
+
+// 判断是否显示"删除文章"按钮
+// 条件：已登录 + 当前用户是这篇文章的作者
+const canDeleteArticle = computed(() => {
+  if (!authStore.user || !article.value) return false
+  // author_name 来自后端返回的文章数据
+  return authStore.user.username === article.value.author_name
+})
+
+// 删除文章
+const handleDeleteArticle = async () => {
+  if (!confirm('确定要删除这篇文章吗？此操作不可恢复。')) return
+
+  try {
+    // 调用后端删除接口
+    await api.delete(`/articles/${article.value.id}/delete/`)
+    alert('删除成功')
+    // 跳回首页
+    router.push('/')
+  } catch (error) {
+    console.error('Failed to delete article:', error)
+    alert('删除失败：' + (error.response?.data?.detail || '未知错误'))
+  }
 }
 
 const handleTocScroll = () => {
@@ -252,7 +288,6 @@ onUnmounted(() => {
       <div class="spinner"></div>
       <p>加载中...</p>
     </div>
-    
     <div v-else-if="article" class="container">
       <div class="breadcrumb">
         <router-link to="/">首页</router-link>
@@ -271,6 +306,13 @@ onUnmounted(() => {
                 <span v-for="tag in article.tags || []" :key="tag.id" class="tag tag-outline">{{ tag.name }}</span>
               </div>
               <h1 class="article-title">{{ article.title }}</h1>
+              <button
+                v-if="canDeleteArticle"
+                @click="handleDeleteArticle"
+                class="btn-delete-article"
+              >
+                🗑️ 删除文章
+            </button>
               <div class="article-meta">
                 <span class="meta-item">
                   <span class="icon">👤</span>
@@ -465,6 +507,29 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* 删除文章按钮 */
+.btn-delete-article {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-article:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
 .article-detail {
   padding: 2rem 0;
 }
@@ -633,7 +698,6 @@ onUnmounted(() => {
   color: var(--text-color);
   font-size: 1.05rem;
 }
-
 .article-content :deep(h1),
 .article-content :deep(h2),
 .article-content :deep(h3),

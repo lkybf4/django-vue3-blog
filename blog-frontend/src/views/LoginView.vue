@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { getOAuthUrl } from '@/api/extras'
+
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -10,7 +10,6 @@ const authStore = useAuthStore()
 const form = ref({ username: '', password: '' })
 const error = ref('')
 const loading = ref(false)
-const oauthLoading = ref('')
 
 const handleLogin = async () => {
   error.value = ''
@@ -22,21 +21,6 @@ const handleLogin = async () => {
     error.value = err.response?.data?.detail || '登录失败，请检查用户名和密码'
   } finally {
     loading.value = false
-  }
-}
-
-const handleOAuth = async (provider) => {
-  oauthLoading.value = provider
-  error.value = ''
-  try {
-    const res = await getOAuthUrl(provider)
-    if (res.data.authorization_url) {
-      window.location.href = res.data.authorization_url
-    }
-  } catch (err) {
-    error.value = err.response?.data?.error || `${provider} 登录暂不可用，请检查 OAuth 配置`
-  } finally {
-    oauthLoading.value = ''
   }
 }
 </script>
@@ -64,28 +48,6 @@ const handleOAuth = async (provider) => {
           {{ loading ? '登录中...' : '登录' }}
         </button>
       </form>
-
-      <div class="oauth-section">
-        <div class="oauth-divider"><span>或使用第三方登录</span></div>
-        <div class="oauth-buttons">
-          <button
-            type="button"
-            class="btn-oauth btn-github"
-            :disabled="!!oauthLoading"
-            @click="handleOAuth('github')"
-          >
-            {{ oauthLoading === 'github' ? '跳转中...' : '💥 GitHub 登录' }}
-          </button>
-          <button
-            type="button"
-            class="btn-oauth btn-wechat"
-            :disabled="!!oauthLoading"
-            @click="handleOAuth('wechat')"
-          >
-            {{ oauthLoading === 'wechat' ? '跳转中...' : '💬 微信登录' }}
-          </button>
-        </div>
-      </div>
       
       <p class="register-link">
         还没有账号？<router-link to="/register">立即注册</router-link>
@@ -173,35 +135,6 @@ const handleOAuth = async (provider) => {
   font-weight: 600;
   cursor: pointer;
 }
-
-.oauth-section { margin-top: 1.5rem; }
-
-.oauth-divider {
-  text-align: center;
-  color: #999;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.oauth-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.btn-oauth {
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.btn-github:hover { border-color: #333; background: #f6f8fa; }
-.btn-wechat:hover { border-color: #07c160; background: #f0fff5; }
-
 .register-link {
   text-align: center;
   margin-top: 1.5rem;
