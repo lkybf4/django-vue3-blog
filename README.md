@@ -4,10 +4,10 @@
 
 基于 Django 6.1 + DRF + Vue 3 的前后端分离博客系统。
 
-## 亮点
+## 核心功能
 
 - ✅ JWT 双 Token 认证（access + refresh 自动刷新）
-- ✅ Markdown 渲染 + XSS 过滤（bleach）
+- ✅ Markdown 渲染 + XSS 过滤
 - ✅ 单元测试 + GitHub Actions CI（徽章已绿）
 - ✅ 对象级权限控制（仅作者可删文章/评论）
 - ✅ Swagger 自动生成 API 文档
