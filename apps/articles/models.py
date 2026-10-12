@@ -171,26 +171,17 @@ class Article(models.Model):
                 strip=True
             )
 
-        # 自动生成摘要（前 200 个字符）
         if not self.summary and self.content:
-            # 去除 Markdown 标记
             text_content = bleach.clean(self.content, strip=True)
             self.summary = text_content[:197] + '...' if len(text_content) > 200 else text_content
 
         super().save(*args, **kwargs)
-        
-        # 更新搜索向量（仅在使用 PostgreSQL 时）
         self.update_search_vector()
-        
-        # 尝试更新Elasticsearch索引
         try:
             from .documents import ArticleDocument
-            # 这里我们只是确保文档会被更新，django-elasticsearch-dsl会自动处理
         except ImportError:
-            # 如果没有安装elasticsearch-dsl，则跳过
             pass
         except Exception as e:
-            # Elasticsearch连接错误，忽略
             print(f"⚠ Elasticsearch连接错误: {e}")
     
     def update_search_vector(self):
@@ -207,7 +198,6 @@ class Article(models.Model):
                                    SearchVector('content', weight='C')
                 )
         except Exception:
-            # 如果使用 SQLite 或其他数据库，忽略此功能
             pass
 
     def increase_views(self):
