@@ -75,11 +75,11 @@ class ArticleElasticsearchSearchView(generics.ListAPIView):
 
         try:
             es_result = _elasticsearch_search(query)
-            if es_result is not None:
+            if es_result is not None:#整个if语句与es_result=...绑定在一起
                 exact_results, related_results = es_result
                 engine = 'elasticsearch'
             else:
-                exact_results, related_results = _orm_search(query)
+                exact_results, related_results = _orm_search(query)#若启用了elasticsearch但搜索失败，则降级为ORM搜索
                 engine = 'database'
 
             exact_serializer = self.get_serializer(exact_results, many=True)

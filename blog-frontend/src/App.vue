@@ -202,7 +202,7 @@ const closeMenu = () => {
             <div class="footer-brand">
               <span class="footer-logo">{{ siteName }}</span>
               <span class="footer-heart">❤</span>
-              <span class="footer-desc">分享技术，记录生活 — 涵盖Python、Django、Vue3之类的技术、科技资讯、新闻热点、美食、健康、旅游等多元化内容</span>
+              <span class="footer-desc"> — 涵盖Python、Django、Vue3之类的技术、科技资讯、新闻热点、美食、健康、旅游等多元化内容</span>
             </div>
             <div class="footer-links">
               <router-link to="/">首页</router-link>

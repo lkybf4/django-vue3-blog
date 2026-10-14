@@ -133,7 +133,7 @@ class ArticleCreateView(generics.CreateAPIView):
         # 应该先保存到数据库再清理缓存
         serializer.save()
         try:
-            cache.delete_pattern({'articl_list:*'}) 
+            cache.delete_pattern({'article_list:*'}) 
         except AttributeError:
             cache.clear()
 
@@ -144,14 +144,14 @@ class ArticleUpdateView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated, IsAuthorOrStaff]
 
     def perform_update(self, serializer):
-        instance = self.get_object().id
+        instance = self.get_object()
+        instance_id = instance.id
         serializer.save()
-        cache.delete(f'article_detail:{instance.id}')
+        cache.delete(f'article_detail:{instance_id}')
         try:
-            cache.delete_pattern({'article_list:*'})
+            cache.delete_pattern('article_list:*')
         except AttributeError:
             cache.clear()
-        
 
 
 class ArticleDeleteView(generics.DestroyAPIView):

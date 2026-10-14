@@ -101,7 +101,7 @@ DATABASES = {
     }
 }
 
-# 生产环境 PostgreSQL 配置示例（取消注释并使用环境变量）
+# 生产环境 PostgreSQL 配置（取消注释并使用环境变量）
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',

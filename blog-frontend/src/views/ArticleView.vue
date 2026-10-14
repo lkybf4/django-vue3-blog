@@ -218,6 +218,11 @@ const handleDeleteArticle = async () => {
     alert('删除失败：' + (error.response?.data?.detail || '未知错误'))
   }
 }
+// 编辑文章：跳转到编辑器页面
+const handleEditArticle = () => {
+  router.push(`/editor/${article.value.id}`)
+}
+
 
 const handleTocScroll = () => {
   const headings = tableOfContents.value
@@ -312,6 +317,13 @@ onUnmounted(() => {
                 class="btn-delete-article"
               >
                 🗑️ 删除文章
+            </button>
+            <button
+            v-if="canDeleteArticle"
+            @click="handleEditArticle"
+            class="btn-edit-article"
+            >
+            ✏️ 编辑文章
             </button>
               <div class="article-meta">
                 <span class="meta-item">
@@ -509,6 +521,20 @@ onUnmounted(() => {
 <style scoped>
 /* 删除文章按钮 */
 .btn-delete-article {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-edit-article {
   display: inline-flex;
   align-items: center;
   gap: 6px;

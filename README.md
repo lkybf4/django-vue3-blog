@@ -1,161 +1,247 @@
-# 个人博客系统
+# 个人博客系统 · Django + DRF + Vue 3
 
 [![Tests](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml/badge.svg)](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml)
 
-基于 Django 6.1 + DRF + Vue 3 的前后端分离博客系统。
+一个前后端分离的个人博客系统。后端用 Django REST Framework 提供 API，前端用 Vue 3 + Vite 单独部署，两者通过 JWT 认证通信。
 
-## 核心功能
+## 目录
 
-- ✅ JWT 双 Token 认证（access + refresh 自动刷新）
-- ✅ Markdown 渲染 + XSS 过滤
-- ✅ 单元测试 + GitHub Actions CI（徽章已绿）
-- ✅ 对象级权限控制（仅作者可删文章/评论）
-- ✅ Swagger 自动生成 API 文档
-
-## 功能
-
-- JWT 登录注册（access + refresh 双 token）
-- Markdown 文章发布，渲染后 XSS 过滤
-- 楼中楼评论
-- 文章列表分页、搜索
-- Swagger API 文档
+- [技术栈](#技术栈)
+- [功能一览](#功能一览)
+- [快速开始](#快速开始)
+- [API 一览](#api-一览)
+- [测试与 CI](#测试与-ci)
+- [技术设计说明](#技术设计说明)
+- [项目结构](#项目结构)
+- [已知限制与开发计划](#已知限制与开发计划)
 
 ## 技术栈
 
-- 后端：Django 6.1 / DRF / SimpleJWT / SQLite
-- 前端：Vue 3 / Vite / Pinia / Vue Router / Axios
-- 文档：drf-spectacular
-- CI：GitHub Actions
+| 层次 | 选型 |
+|------|------|
+| 后端 | Python 3.12 · Django 6.1 · Django REST Framework 3.18 |
+| 认证 | SimpleJWT（access 30 分钟 / refresh 7 天，轮换 + 黑名单） |
+| 数据处理 | Markdown + bleach（XSS 白名单过滤）· Pillow（图片上传） |
+| 存储 | SQLite（开发）/ PostgreSQL（生产）· Redis 缓存（生产） |
+| 前端 | Vue 3（组合式 API）· Vite 5 · Vue Router 4 · Pinia 2 · Axios |
+| 文档 | drf-spectacular（Swagger UI） |
+| 质量 | Django TestCase / APITestCase · GitHub Actions |
+| 部署 | Dockerfile · Docker Compose（PostgreSQL + Redis + 前后端） |
+
+可选扩展（注：若没有elasticresearch方法，会降级到django的q查询方式）：Elasticsearch 全文搜索、Celery 定时任务、Channels WebSocket。
+
+## 功能一览
+
+### 已在本地验证可用
+
+- **认证**：注册、登录、Token 刷新、当前用户资料读写
+- **文章**：发布、列表（分页 / 关键词搜索 / 排序 / 按分类·标签·专题筛选）、详情（含渲染后的 HTML 与相关文章推荐）、删除
+- **Markdown 渲染**：服务端渲染并落库到 `content_html`，用 bleach 白名单过滤标签与属性（单元测试覆盖 `<script>` 注入用例）
+- **评论**：二级"楼中楼"评论的列表与发表，仅作者或管理员可删除
+- **内容组织**：分类 / 标签 / 专题、按年月归档与站点统计
+- **SEO**：`sitemap.xml`、`robots.txt`、RSS 订阅
+- **其他模块**：站点配置、友情链接、个人笔记
+- **站点监控**：`scripts/monitor_agent.py` 定时上报服务器指标，后台与前端可视化展示
+- **工程化**：分级接口限流、对象级权限、Swagger 文档、GitHub Actions 单元测试、Docker Compose 一键起依赖
+
+### 已实现但需要额外依赖才能启用
+
+| 功能 | 状态说明 |
+|------|----------|
+| Elasticsearch 全文搜索 | 代码完成，`USE_ELASTICSEARCH=true` 时启用；未启用或 ES 不可用时自动降级为数据库查询 |
+| WebSocket 实时评论 | 消费者与前端组合式函数已完成，需安装 `channels` 并放开 `INSTALLED_APPS` / `ASGI_APPLICATION` 才会生效 |
+| 第三方登录 | GitHub / 微信 的 OAuth 客户端代码已完成，路由挂载与联调尚未完成 |
+| Celery 定时任务 | 任务函数已完成（统计、周报、临时文件清理），需运行 broker 与 worker |
+
+> 上面这几项在默认配置下**不会生效**，不影响主流程运行。
 
 ## 快速开始
 
 ### 后端
-\`\`\`bash
-python -m venv venv
-venv\Scripts\activate          # Windows
-source venv/bin/activate       # Mac/Linux
 
-pip install -r requirements.txt
+```bash
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
+
+pip install "django>=6.1" djangorestframework djangorestframework-simplejwt \
+            django-cors-headers drf-spectacular django-filter \
+            markdown bleach pillow django-redis
+
 python manage.py migrate
-python seed.py                 # 灌示例数据
+python seed.py            # 创建演示账号并灌入几篇示例文章
 python manage.py runserver
-\`\`\`
+```
+
+> `requirements.txt` 是完整依赖清单，含上述可选扩展包。若其中某个包的版本约束与本机环境不符，以本机能跑通的版本为准。
 
 ### 前端
-\`\`\`bash
+
+```bash
 cd blog-frontend
 npm install
 npm run dev
-\`\`\`
+```
 
-访问：
-- 前端 http://localhost:5173
-- 后端 API http://localhost:8000
-- API 文档 http://localhost:8000/api/docs/
+Vite 已配置 `/api`、`/media`、`/sitemap.xml`、`/robots.txt`、`/ws` 的代理，前端无需额外配置跨域。
 
-### 测试账号
-- admin / admin123
+### 访问地址
 
-## API 端点
+| 地址 | 说明 |
+|------|------|
+| http://localhost:5173 | 前端页面 |
+| http://localhost:8000 | 后端 API |
+| http://localhost:8000/api/docs/ | Swagger 交互式文档 |
+| http://localhost:8000/admin/ | Django 管理后台 |
 
-所有接口以 `/api/` 为前缀，完整文档见 Swagger UI：http://localhost:8000/api/docs/
+### 演示账号
 
-### 认证 Auth
+执行 `python seed.py` 后可用：`admin` / `admin123`（本地演示用，请勿用于任何公开环境）。
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|:----:|
-| POST | `/api/auth/register/` | 用户注册 | ❌ |
-| POST | `/api/auth/token/` | 登录获取 JWT（返回 access + refresh） | ❌ |
-| POST | `/api/auth/token/refresh/` | 用 refresh token 换新的 access token | ❌ |
-| GET  | `/api/auth/profile/` | 获取当前登录用户信息 | ✅ |
-| PUT  | `/api/auth/profile/` | 更新当前用户信息 | ✅ |
-| PATCH | `/api/auth/profile/` | 部分更新当前用户信息 | ✅ |
+## API 一览
 
-### 文章 Articles
+所有接口以 `/api/` 为前缀，完整且可在线调试的版本见 Swagger UI：http://localhost:8000/api/docs/
+
+### 认证 `/api/auth/`
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|:----:|
-| GET    | `/api/articles/` | 文章列表，支持分页 `?page=`、搜索 `?search=`、排序 `?ordering=` | ❌ |
-| GET    | `/api/articles/{id}/` | 文章详情（含 Markdown 渲染后的 HTML） | ❌ |
-| POST   | `/api/articles/create/` | 创建文章 | ❌ |
-| PUT    | `/api/articles/{id}/update/` | 更新文章（完整覆盖） | ✅ |
-| PATCH  | `/api/articles/{id}/update/` | 更新文章（部分字段） | ✅ |
-| DELETE | `/api/articles/{id}/delete/` | 删除文章 | ✅ |
-| POST   | `/api/articles/upload-image/` | 上传图片（用于 Markdown 内嵌） | ❌ |
+| POST | `/auth/register/` | 用户注册 | 否 |
+| POST | `/auth/token/` | 登录，返回 access + refresh | 否 |
+| POST | `/auth/token/refresh/` | 用 refresh 换新的 access（同时轮换 refresh） | 否 |
+| GET / PUT / PATCH | `/auth/profile/` | 读取 / 更新当前用户资料 | 是 |
+| GET | `/auth/users/` | 用户列表 | 是 |
 
-### 评论 Comments
+### 文章 `/api/articles/`
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|:----:|
-| GET    | `/api/comments/article/{article_id}/` | 获取某篇文章的评论列表（分页） | ❌ |
-| POST   | `/api/comments/create/` | 发表评论（支持 `parent` 字段实现楼中楼） | ✅ |
-| DELETE | `/api/comments/{id}/delete/` | 删除评论（仅作者或管理员） | ✅ |
+| GET | `/articles/` | 列表，支持 `?page=` `?search=` `?ordering=` `?category=` `?tag=` `?series=` `?year=` `?month=` | 否 |
+| GET | `/articles/{id}/` | 详情（含渲染后 HTML、相关文章） | 否 |
+| POST | `/articles/create/` | 发布文章 | 否（待加固） |
+| PUT / PATCH | `/articles/{id}/update/` | 编辑文章 | 是（仅作者 / 管理员） |
+| DELETE | `/articles/{id}/delete/` | 删除文章 | 是（仅作者 / 管理员） |
+| POST | `/articles/upload-image/` | 上传 Markdown 内嵌图片 | 是 |
+| GET | `/articles/search/?q=` | 全文搜索（Elasticsearch 优先，异常时自动降级） | 否 |
+| GET | `/articles/categories/` `/tags/` `/series/` `/series/{slug}/` | 分类 / 标签 / 专题 | 否 |
+| GET | `/articles/categories/{slug}/articles/` `/tags/{slug}/articles/` | 按分类 / 标签取文章 | 否 |
+| GET | `/articles/archive/` `/archive/{year}/` `/archive/{year}/{month}/` `/statistics/` | 归档与统计 | 否 |
+| GET | `/articles/rss/` | RSS 订阅 | 否 |
 
-### 站点 Site
+### 评论 `/api/comments/`
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|:----:|
-| GET | `/api/site/` | 站点配置（站点名、描述、作者、备案号等） | ❌ |
+| GET | `/comments/article/{article_id}/` | 某篇文章的评论（含回复） | 否 |
+| POST | `/comments/create/` | 发表评论，带 `parent` 即为回复 | 是 |
+| DELETE | `/comments/{id}/delete/` | 删除评论 | 是（仅作者 / 管理员） |
 
-### 笔记 Notes
+### 站点 / 笔记 / 监控 / 系统
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|:----:|
-| GET | `/api/notes/` | 笔记列表 | ❌ |
+| GET | `/api/site/` `/api/site/friend-links/` | 站点配置、友情链接 | 否 |
+| GET | `/api/notes/` `/api/notes/{id}/` | 笔记列表 / 详情（私有笔记仅作者可见） | 否 |
+| POST | `/api/monitoring/report/` | 服务器指标上报（需上报 token） | Token |
+| GET | `/api/monitoring/servers/` | 监控服务器列表与最新指标 | 是 |
+| GET | `/health/` `/readiness/` | 健康检查 / 就绪检查（含数据库连通性） | 否 |
+| GET | `/api/schema/` `/api/docs/` | OpenAPI schema / Swagger UI | 否 |
+| GET | `/sitemap.xml` `/robots.txt` | SEO | 否 |
 
-### 系统 System
+## 测试与 CI
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/health/` | 健康检查 |
-| GET | `/readiness/` | 就绪检查 |
-| GET | `/admin/` | Django 管理后台 |
-| GET | `/api/docs/` | Swagger UI 交互式文档 |
-| GET | `/api/schema/` | OpenAPI 3.0 schema |
-| GET | `/robots.txt` | 爬虫规则 |
-| GET | `/sitemap.xml` | 站点地图 |
+```bash
+# 全部测试
+python manage.py test apps -v 2
+
+# 只跑文章模块
+python manage.py test apps.articles -v 2
+```
+
+当前共 34 个用例，覆盖：文章模型（slug 生成与唯一性、Markdown 渲染、XSS 过滤、摘要截取、匿名作者、默认状态）、文章 API（列表分页结构、详情）、评论（模型、嵌套回复、审核状态、删除权限、内容校验）、用户（模型与注册登录接口）。
+
+CI 配置见 `.github/workflows/test.yml`，推送或 PR 到 `main` 时自动执行。
+
+## 技术设计说明
+
+### 1. JWT 双 Token 与前端无感刷新
+
+后端 access token 30 分钟、refresh token 7 天，开启轮换并加入黑名单（`ROTATE_REFRESH_TOKENS` + `BLACKLIST_AFTER_ROTATION`），避免 refresh token 被反复使用。
+
+前端在 Axios 响应拦截器里统一处理 401：用 refresh 换到新 access 后**重放原请求**。关键点是并发场景——页面同时发起多个请求时，只让第一个触发刷新，其余请求挂在队列里，等新 token 到手后统一重放，避免"一次刷新引发 N 次刷新"把 token 打废。同时标记 `_retry` 防止同一请求无限重试。
+
+### 2. 对象级权限与作者字段的取舍
+
+列表与详情对所有人开放（`IsAuthenticatedOrReadOnly`），写操作叠加对象级校验 `IsAuthorOrStaff`——只有作者本人或管理员能改删文章与评论。
+
+文章与评论的 `author` 外键用 `SET_NULL` 而非级联删除：用户注销后内容仍保留，展示名回退到 `nickname` 字段。这也意味着所有读取作者名的地方都必须处理 `author` 为空的情况。
+
+### 3. 分级限流
+
+登录、评论、上传、匿名突发流量各自使用独立的 throttle scope，而不是全局一刀切；计数落在缓存里，便于多进程 / 多实例共享。
+
+### 4. 全文搜索的降级设计
+
+搜索优先走 Elasticsearch（多字段加权、模糊匹配），但 ES 被设计成可选依赖：未配置、连接失败或索引未建立时，自动降级为数据库查询，接口契约保持不变，只通过返回体里的 `engine` 字段（`elasticsearch` / `database`）暴露实际走的是哪条链路。文档注册也做了可用性探测——ES 连不上就干脆不注册索引，避免启动即报错。
+
+### 5. 缓存策略
+
+文章列表按查询参数分片缓存 5 分钟，详情缓存 10 分钟（缓存命中时单独回写实时阅读量），归档与统计缓存 30 分钟至 1 小时。写操作（发布 / 编辑 / 删除 / 评论）后按前缀失效对应缓存，保证"发表即生效"。开发环境用 `LocMemCache`（零外部依赖），生产切 Redis。
+
+### 6. 阅读量原子自增与 Markdown 安全
+
+阅读量用 `F('views') + 1` 在数据库侧原子自增，避免并发读改写导致的丢失更新。
+
+Markdown 在服务端渲染后统一经 bleach 白名单过滤标签与属性，再把结果落库到 `content_html`；前端直接用 `v-html` 展示这份已净化的 HTML，不在客户端二次解析 Markdown，减少 XSS 面。
+
 ## 项目结构
 
 ```
-django-vue3-blog/
-├── apps/                          # Django 业务模块
-│   ├── users/                     # 用户认证（注册、JWT 登录）
-│   ├── articles/                  # 文章（模型、API、图片上传）
-│   ├── comments/                  # 评论（支持嵌套回复）
-│   ├── system/                    # 站点配置、健康检查、SEO
-│   ├── notes/                     # 笔记模块
-│   └── monitoring/                # 监控上报
-├── blog_backend/                  # Django 项目配置
-│   ├── settings.py                # 开发环境配置
-│   ├── settings_production.py     # 生产环境配置
-│   ├── urls.py                    # 主路由
-│   ├── asgi.py / wsgi.py
+.
+├── apps/
+│   ├── users/          # 认证、用户资料、OAuth 客户端代码
+│   ├── articles/       # 文章、分类、标签、专题、归档、搜索、图片上传
+│   ├── comments/       # 评论（嵌套）、WebSocket 消费者
+│   ├── notes/          # 个人笔记
+│   ├── system/         # 站点配置、友情链接、健康检查、SEO
+│   └── monitoring/     # 服务器指标上报与展示
+├── blog_backend/
+│   ├── settings.py             # 开发环境配置
+│   ├── settings_production.py  # 生产环境配置（环境变量驱动）
+│   ├── urls.py / asgi.py / wsgi.py
 │   └── sitemaps.py / seo_views.py
-├── blog-frontend/                 # Vue 3 前端
-│   ├── src/
-│   │   ├── api/                   # Axios 封装 + 各模块 API
-│   │   ├── views/                 # 页面组件
-│   │   ├── components/            # 可复用组件
-│   │   ├── router/                # Vue Router 配置
-│   │   ├── stores/                # Pinia 状态管理
-│   │   ├── composables/           # 组合式函数
-│   │   ├── App.vue
-│   │   └── main.js
-│   ├── vite.config.js             # Vite 配置（含 API 代理）
-│   └── package.json
-├── scripts/                       # 工具脚本
-│   ├── seed.py                    # 灌示例数据
-│   └── monitor_agent.py           # 监控客户端
-├── manage.py                      # Django 命令入口
-├── requirements.txt               # Python 依赖
-├── .env.example                   # 环境变量模板
-└── README.md
+├── blog-frontend/
+│   └── src/
+│       ├── api/          # Axios 实例（Token 注入 + 401 刷新重放）与各模块接口
+│       ├── views/        # 页面
+│       ├── components/   # 可复用组件
+│       ├── composables/  # useCommentWebSocket / useSeo 等
+│       ├── stores/       # Pinia（认证、主题）
+│       └── router/
+├── scripts/
+│   ├── monitor_agent.py  # 服务器监控采集上报脚本
+│   └── seed.py           # 演示数据
+├── manage.py · requirements.txt · .env.example
+└── Dockerfile · docker-compose.yml · DEPLOYMENT.md
 ```
 
-## 已知问题 / 待办
+## 已知限制与开发计划
 
-- [ ] 部署到公网
-- [ ] 图片上传
+开发过程中记录的问题与下一步，按优先级排列：
+
+- [ ] **游客投稿加固**：目前匿名用户也能直接发布文章，计划改为"游客投稿落草稿 + 后台审核后发布"，并叠加更严格的匿名限流
+- [ ] **修复文章编辑接口**：`PUT / PATCH /api/articles/{id}/update/` 的缓存清理逻辑有缺陷，会导致请求异常，正在修复
+- [ ] **补充写接口测试**：现有测试集中在模型层与只读接口，缺发布 / 编辑 / 删除以及权限矩阵的用例
+- [ ] **注册接口接入密码强度校验**：复用 Django 的 `AUTH_PASSWORD_VALIDATORS`，并补邮箱唯一性校验
+- [ ] **收紧监控接口权限**：服务器指标属内部信息，计划限制为仅管理员可见
+- [ ] **整理依赖清单**：`requirements.txt` 与 `pyproject.toml` 存在重复声明和版本不一致，计划合并为单一来源并与实际环境对齐
+- [ ] **启用 WebSocket 实时评论**：安装并配置 `channels` 后打通，前端已有对应组合式函数
+- [ ] **补齐 Swagger 注解**：部分视图缺少 `serializer_class`，`/api/docs/` 中展示不完整
+- [ ] **生产环境配置统一**：统一 `DEBUG`、`ALLOWED_HOSTS` 等环境变量命名，补全静态文件与 WSGI 服务器方案
+- [ ] **真实部署**：用 Gunicorn + Nginx 部署到公网，并把线上地址补进本文档
 
 ## License
 

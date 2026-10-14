@@ -5,8 +5,6 @@ from django.utils.text import slugify
 import markdown
 import bleach
 import uuid
-
-# 尝试导入 PostgreSQL 搜索功能（可选）
 import os
 
 _use_postgres = os.environ.get('DB_ENGINE', 'sqlite') == 'postgresql'
@@ -171,7 +169,7 @@ class Article(models.Model):
                 strip=True
             )
 
-        if not self.summary and self.content:
+        if self.content:
             text_content = bleach.clean(self.content, strip=True)
             self.summary = text_content[:197] + '...' if len(text_content) > 200 else text_content
 
