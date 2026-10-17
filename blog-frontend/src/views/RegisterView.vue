@@ -33,7 +33,7 @@ const handleRegister = async () => {
     const errors = err.response?.data
     if (errors) {
       const messages = Object.values(errors).flat()
-      error.value = messages.join('；')
+      error.value = messages.join(' ')
     } else {
       error.value = '注册失败，请稍后重试'
     }
@@ -81,7 +81,7 @@ const handleRegister = async () => {
             v-model="form.password"
             type="password"
             required
-            placeholder="请输入密码（至少8位）"
+            placeholder="请输入密码（至少8位）,需包含字母和数字"
           />
         </div>
         

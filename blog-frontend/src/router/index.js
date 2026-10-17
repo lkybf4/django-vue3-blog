@@ -98,6 +98,7 @@ const router = createRouter({
       path: '/write',
       name: 'write',
       component: lazyLoad(() => import('@/views/GuestEditorView.vue')),
+      meta:{requiresAuth: true}
     },
     {
       path: '/login',

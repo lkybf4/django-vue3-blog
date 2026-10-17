@@ -126,11 +126,10 @@ const closeMenu = () => {
           <router-link to="/about" class="nav-link" @click="closeMenu">
             <span>关于</span>
           </router-link>
-          <!-- ========================================
+          <!-- 
      用户登录 / 用户信息区块
      未登录：显示"登录""注册"按钮
-     已登录：显示用户名 + 退出按钮
-     ======================================== -->
+     已登录：显示用户信息 -->
 <template v-if="!authStore.isAuthenticated">
   <router-link to="/login" class="nav-link" @click="closeMenu">
     <span>登录</span>

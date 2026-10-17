@@ -127,7 +127,7 @@ class ArticleDetailView(generics.RetrieveAPIView):
 class ArticleCreateView(generics.CreateAPIView):
     queryset = Article.objects.all()
     serializer_class = ArticleCreateSerializer
-    permission_classes = []  # 允许任何人发布文章，包括匿名用户
+    permission_classes = [IsAuthenticated]  # 允许 authenticated 用户发布文章
 
     def perform_create(self, serializer):
         # 应该先保存到数据库再清理缓存
