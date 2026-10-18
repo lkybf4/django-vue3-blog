@@ -89,7 +89,7 @@ const handleCoverUpload = async (event) => {
     return
   }
   
-  if (file.size > 5 * 1024 * 1024) {
+  if (file.size > 5 * 1600 * 1024) {
     alert('图片大小不能超过 5MB')
     return
   }
@@ -117,7 +117,7 @@ const handleImageUpload = async (event) => {
     return
   }
   
-  if (file.size > 5 * 1024 * 1024) {
+  if (file.size > 5 * 1600 * 1024) {
     alert('图片大小不能超过 5MB')
     return
   }

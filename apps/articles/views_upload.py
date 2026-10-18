@@ -42,27 +42,29 @@ class ImageUploadView(APIView):
         ext = image.name.split('.')[-1]
         filename = f"{uuid.uuid4().hex}.{ext}"
         
-        # 创建保存路径
-        upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploads', '%Y', '%m')
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # 使用日期格式化路径
+        # 获取当前年月
         from datetime import datetime
         now = datetime.now()
-        upload_path = os.path.join(
-            settings.MEDIA_ROOT,
-            'uploads',
-            str(now.year),
-            f"{now.month:02d}",
-            filename
-        )
         
-        # 保存文件
+        # 1. 先拼接出正确的保存目录（比如 media/uploads/2026/10/）
+        upload_dir = os.path.join(
+            settings.MEDIA_ROOT, 
+            'uploads', 
+            str(now.year), 
+            f"{now.month:02d}"
+        )
+        # 确保这个真实路径存在（exist_ok=True 防止重复创建报错）
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # 2. 拼出完整的文件绝对路径
+        upload_path = os.path.join(upload_dir, filename)
+        
+        # 3. 写入文件
         with open(upload_path, 'wb+') as destination:
             for chunk in image.chunks():
                 destination.write(chunk)
         
-        # 返回图片 URL
+        # 4. 返回给前端的相对 URL（注意这里也统一格式）
         image_url = f"{settings.MEDIA_URL}uploads/{now.year}/{now.month:02d}/{filename}"
         
         return Response({

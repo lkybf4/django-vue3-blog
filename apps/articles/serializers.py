@@ -81,7 +81,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     reading_time = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True, default=0)
-    cover = ExternalImageField(required=False, allow_null=True)
+    cover =  cover = serializers.CharField(read_only=True)
 
     class Meta:
         model = Article
@@ -107,7 +107,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     series = SeriesListSerializer(read_only=True)
-    cover = EmptyStringToNullImageField(required=False, allow_null=True)
+    cover = serializers.CharField(read_only=True)
     reading_time = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
 
@@ -136,7 +136,7 @@ class ArticleDetailSerializer(serializers.ModelSerializer):
 
 
 class ArticleCreateSerializer(serializers.ModelSerializer):
-    cover=EmptyStringToNullImageField(required=False,allow_null=True)
+    cover = serializers.CharField(required=False, allow_null=True, allow_blank=True)
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), source='category', required=False, allow_null=True
     )

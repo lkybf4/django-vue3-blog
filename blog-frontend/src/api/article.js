@@ -58,10 +58,17 @@ export const deleteArticle = (id) => {
   return api.delete(`/articles/${id}/delete/`)
 }
 
-export const uploadImage = (formData) => {
-  return api.post('/articles/upload-image/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+export const uploadImage = (file) => {
+  // 1. 必须实例化 FormData
+  const formData = new FormData()
+  
+  // 2. 这里的 'image' 必须和后端的 request.FILES['image'] 拼写一模一样
+  formData.append('image', file)
+  
+  // 3. 发送请求
+  // 注意：不需要手动设置 'Content-Type': 'multipart/form-data'，
+  // 现代浏览器和 Axios 会自动识别 FormData 并加上正确的 boundary。
+  return api.post('/articles/upload-image/', formData)
 }
 
 export const searchArticles = (query) => {
