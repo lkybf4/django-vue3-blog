@@ -10,19 +10,37 @@ html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--text-color);
-  background-color: var(--background-color);
+/* 干净的亮色背景 */
+#app {
+  background: radial-gradient(circle at 10% 20%, #e8f5e9 0%, #f4f7f6 80%);
+  background-attachment: fixed;
   min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background 0.3s ease;
 }
 
+/* 干净的暗色背景 */
+#app.theme-dark {
+  background: radial-gradient(circle at 10% 20%, #383838 0%, #1c1c1c 80%);
+  background-attachment: fixed;
+}
+
+/* 干净的卡片 */
+.card,
+.article-card,
+.sidebar-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* 干净的暗色卡片 */
+#app.theme-dark .card,
+#app.theme-dark .article-card,
+#app.theme-dark .sidebar-card {
+  background: rgba(45, 45, 45, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
 ::selection {
   background-color: var(--primary-color);
   color: #ffffff;
@@ -34,7 +52,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background-color);
+  background: transparent; /* 让滚动条轨道也透出背景 */
 }
 
 ::-webkit-scrollbar-thumb {
@@ -105,17 +123,35 @@ select {
   padding: 0 20px;
 }
 
-.card {
-  background: var(--surface-color);
+/* ==================== 卡片毛玻璃区 ==================== */
+/* 全局卡片基础样式（融合了毛玻璃效果，干掉原来的纯色背景） */
+.card,
+.article-card,
+.sidebar-card {
+  background: rgba(255, 255, 255, 0.75) !important; /* 亮色模式半透明白 */
+  backdrop-filter: blur(12px); /* 磨砂玻璃质感 */
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--card-radius);
-  box-shadow: 0 1px 3px var(--shadow-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
   overflow: hidden;
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease, background 0.3s ease;
+}
+
+/* 暗黑模式卡片基础样式 */
+.theme-dark .card,
+.theme-dark .article-card,
+.theme-dark .sidebar-card {
+  background: rgba(45, 55, 72, 0.75) !important; /* 暗色模式半透明黑灰 */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .card:hover {
-  box-shadow: 0 4px 12px var(--shadow-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
 }
+/* ==================================================== */
 
 .card-header {
   padding: 16px 20px;
@@ -239,9 +275,13 @@ select {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  background: var(--surface-color);
+  background: rgba(255, 255, 255, 0.6); /* 空状态也半透明 */
   border-radius: var(--card-radius);
   box-shadow: 0 1px 3px var(--shadow-color);
+}
+
+.theme-dark .empty-state {
+  background: rgba(45, 55, 72, 0.6);
 }
 
 .empty-state .empty-icon {

@@ -383,12 +383,11 @@ onMounted(() => {
 }
 
 .article-card {
-  background: var(--surface-color);
-  border-radius: var(--card-radius);
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.75); 
+  backdrop-filter: blur(10px); /* 模糊卡片背后的渐变 */
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5); /* 加一点极细的边框增加立体感 */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); /* 淡淡的阴影 */
 }
 
 .article-card:hover {

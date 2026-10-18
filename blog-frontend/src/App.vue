@@ -248,7 +248,10 @@ const closeMenu = () => {
   --card-radius: 16px;
 }
 
-.theme-dark {
+.theme-dark #app {
+  background: radial-gradient(circle at 50% 0%, #2c3e50 0%, var(--background-color) 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
   --primary-color: #FF8C42;
   --secondary-color: #FFB347;
   --accent-color: #6BCB77;
@@ -545,7 +548,7 @@ const closeMenu = () => {
 .main-content {
   min-height: calc(100vh - 160px);
   padding-top: 56px;
-  background: var(--background-color);
+  background: transparent;
   transition: background-color 0.3s ease;
 }
 
@@ -707,5 +710,18 @@ const closeMenu = () => {
     bottom: 20px;
     right: 20px;
   }
+
+  #app {
+  /* 采用极简微光渐变（亮色） */
+  background: red !important;
+  min-height: 100vh;
+}
+
+/* 暗黑模式下的专属微光渐变 */
+.theme-dark#app {
+  background: radial-gradient(circle at 50% -20%, #3b2f2f 0%, var(--background-color) 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
 }
 </style>
