@@ -7,11 +7,7 @@ import axios from 'axios'
 
 // 创建一个 axios 实例（不要用全局 axios）
 const api = axios.create({
-  // baseURL：所有请求都会自动加 /api 前缀
-  // 比如 api.post('/auth/token/') 实际发到 /api/auth/token/
-  baseURL: '/api',
-  
-  // timeout：请求 10 秒没响应就报超时
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api', 
   timeout: 10000,
 })
 
