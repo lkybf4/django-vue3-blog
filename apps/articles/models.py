@@ -175,12 +175,6 @@ class Article(models.Model):
 
         super().save(*args, **kwargs)
         self.update_search_vector()
-        try:
-            from .documents import ArticleDocument
-        except ImportError:
-            pass
-        except Exception as e:
-            print(f"⚠ Elasticsearch连接错误: {e}")
     
     def update_search_vector(self):
         """更新全文搜索向量（PostgreSQL）"""
@@ -206,3 +200,10 @@ class Article(models.Model):
     def get_summary(self):
         """获取摘要"""
         return self.summary
+
+    @property
+    def author_name(self):
+        """展示用作者名：登录用户取用户名，否则回退到昵称（author 可能因用户注销为 None）"""
+        if self.author:
+            return self.author.username
+        return self.nickname or '匿名用户'

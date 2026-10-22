@@ -21,15 +21,7 @@ class ImageUploadView(APIView):
             )
 
         image = request.FILES['image']
-        
-        # 验证文件类型
-        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-        if image.content_type not in allowed_types:
-            return Response(
-                {'error': '不支持的图片格式，仅支持 JPG、PNG、GIF、WebP'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+
         # 验证文件大小（最大 5MB）
         max_size = 5 * 1024 * 1024  # 5MB
         if image.size > max_size:
@@ -38,8 +30,29 @@ class ImageUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # 用 Pillow 真正解码一次，不能只信客户端传的 content_type
+        from PIL import Image, UnidentifiedImageError
+        try:
+            probe = Image.open(image)
+            probe.verify()
+            image_format = (probe.format or '').upper()
+        except (UnidentifiedImageError, OSError, ValueError):
+            return Response(
+                {'error': '上传的文件不是有效图片'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        finally:
+            image.seek(0)
+
+        allowed_formats = {'JPEG': 'jpg', 'PNG': 'png', 'GIF': 'gif', 'WEBP': 'webp'}
+        ext = allowed_formats.get(image_format)
+        if not ext:
+            return Response(
+                {'error': '不支持的图片格式，仅支持 JPG、PNG、GIF、WebP'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # 生成唯一文件名
-        ext = image.name.split('.')[-1]
         filename = f"{uuid.uuid4().hex}.{ext}"
         
         # 获取当前年月

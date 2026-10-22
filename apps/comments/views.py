@@ -6,6 +6,7 @@ from django.core.cache import cache
 from .models import Comment
 from .serializers import CommentSerializer, CommentCreateSerializer
 from .throttles import CommentRateThrottle
+from apps.articles.cache import bump_article_list_cache
 class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_object_permission(self,request,view,obj):
         if request.method in permissions.SAFE_METHODS:
@@ -39,6 +40,8 @@ class CommentCreateView(generics.CreateAPIView):#发表或创建评论
     def perform_create(self, serializer):
         comment = serializer.save()
         cache.delete(f'article_detail:{comment.article.id}')
+        # 列表里的 comments_count 也会变化
+        bump_article_list_cache()
 
 
 class CommentDeleteView(generics.DestroyAPIView):#删除评论
@@ -50,6 +53,7 @@ class CommentDeleteView(generics.DestroyAPIView):#删除评论
         article_id = instance.article.id
         self.perform_destroy(instance)
         cache.delete(f'article_detail:{article_id}')
+        bump_article_list_cache()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_destroy(self, instance):

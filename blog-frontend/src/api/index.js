@@ -107,9 +107,9 @@ api.interceptors.response.use(
     }
 
     try {
-      // 用 refresh token 换新的 access token
-      // 注意：这里用全局 axios，不是 api 实例，避免死循环
-      const res = await axios.post('/api/auth/token/refresh/', {
+      // 用 api 实例刷新，才能正确带上 VITE_API_BASE_URL（部署时前后端不同域）
+      // 刷新接口本身的 401 由上方「情况 2」拦截，不会造成死循环
+      const res = await api.post('/auth/token/refresh/', {
         refresh: refreshToken,
       })
 
@@ -117,6 +117,11 @@ api.interceptors.response.use(
 
       // 保存新的 access token
       localStorage.setItem('access_token', newAccess)
+      // 后端开启了 ROTATE_REFRESH_TOKENS + BLACKLIST_AFTER_ROTATION，
+      // 必须同步保存轮换后的 refresh，否则下一次刷新会用到已进黑名单的旧 token
+      if (res.data.refresh) {
+        localStorage.setItem('refresh_token', res.data.refresh)
+      }
 
       // 重发所有被挂起的请求
       pendingRequests.forEach((callback) => callback(newAccess))

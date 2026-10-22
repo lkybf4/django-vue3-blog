@@ -65,10 +65,15 @@ class CommentCreateSerializer(serializers.ModelSerializer):
             return '匿名用户'
         return value.strip()
 
-    def validate_parent(self, value):
-        if value and value.parent is not None:
-            raise serializers.ValidationError("仅支持二级回复")
-        return value
+    def validate(self, attrs):
+        article = attrs.get('article')
+        parent = attrs.get('parent')
+        if parent:
+            if parent.parent_id is not None:
+                raise serializers.ValidationError({'parent': '仅支持二级回复'})
+            if article and parent.article_id != article.id:
+                raise serializers.ValidationError({'parent': '回复必须属于同一篇文章'})
+        return attrs
 
     def create(self, validated_data):
         request = self.context.get('request')

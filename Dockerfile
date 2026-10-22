@@ -20,7 +20,7 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 
-RUN python manage.py collectstatic --noinput
+RUN DJANGO_BUILDING=1 python manage.py collectstatic --noinput
 
 EXPOSE 7860
 

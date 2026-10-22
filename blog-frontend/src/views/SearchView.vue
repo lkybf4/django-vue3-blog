@@ -61,10 +61,31 @@ const goToArticle = (id) => {
   router.push(`/article/${id}`)
 }
 
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[ch]))
+
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 const highlightText = (text, query) => {
-  if (!text || !query) return text
-  const regex = new RegExp(`(${query})`, 'gi')
-  return text.replace(regex, '<mark>$1</mark>')
+  if (!text) return ''
+  const source = String(text)
+  if (!query) return escapeHtml(source)
+  let regex
+  try {
+    regex = new RegExp(`(${escapeRegExp(query)})`, 'gi')
+  } catch {
+    return escapeHtml(source)
+  }
+  // 先按命中项切分，再逐段转义，避免把文章标题里的 HTML 当标签渲染
+  return source
+    .split(regex)
+    .map((part, index) => (index % 2 === 1 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part)))
+    .join('')
 }
 
 watch(

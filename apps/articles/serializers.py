@@ -2,8 +2,6 @@ import math
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Article, Category, Tag, Series
-from rest_framework import serializers
-from .models import Article, Category, Tag, Series
 
 
 class EmptyStringToNullImageField(serializers.ImageField):
@@ -81,7 +79,7 @@ class ArticleListSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     reading_time = serializers.SerializerMethodField()
     comments_count = serializers.IntegerField(read_only=True, default=0)
-    cover =  cover = serializers.CharField(read_only=True)
+    cover = serializers.CharField(read_only=True)
 
     class Meta:
         model = Article
@@ -157,13 +155,19 @@ class ArticleCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
-        if request and hasattr(request, 'user') and request.user.is_authenticated:
-            validated_data['author'] = request.user
-        # 如果没有指定昵称，默认使用匿名用户
-        if 'nickname' not in validated_data or not validated_data['nickname']:
-            validated_data['nickname'] = '匿名用户'
-        # 匿名发布的文章默认状态为已发布
-        validated_data['status'] = 'published'
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated:
+            validated_data['author'] = user
+        if not validated_data.get('nickname'):
+            validated_data['nickname'] = (
+                user.username if user and user.is_authenticated else '匿名用户'
+            )
+        # 置顶属于运营权限，只有管理员可以设置
+        if not (user and user.is_staff):
+            validated_data.pop('is_top', None)
+        # 草稿/发布二选一，非法值一律按发布处理
+        if validated_data.get('status') not in dict(Article.STATUS_CHOICES):
+            validated_data['status'] = 'published'
         tags = validated_data.pop('tags', [])
         article = super().create(validated_data)
         if tags:
@@ -171,6 +175,12 @@ class ArticleCreateSerializer(serializers.ModelSerializer):
         return article
 
     def update(self, instance, validated_data):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not (user and user.is_staff):
+            validated_data.pop('is_top', None)
+        if 'status' in validated_data and validated_data['status'] not in dict(Article.STATUS_CHOICES):
+            validated_data.pop('status')
         tags = validated_data.pop('tags', None)
         article = super().update(instance, validated_data)
         if tags is not None:

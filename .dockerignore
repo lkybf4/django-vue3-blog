@@ -6,3 +6,8 @@ __pycache__/
 *.pyc
 .env
 db.sqlite3
+cloudflared.exe
+staticfiles/
+node_modules/
+blog-frontend/node_modules/
+blog-frontend/dist/

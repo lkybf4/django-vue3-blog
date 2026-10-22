@@ -13,7 +13,7 @@
 - [测试与 CI](#测试与-ci)
 - [技术设计说明](#技术设计说明)
 - [项目结构](#项目结构)
-- [已知限制与开发计划](#已知限制与开发计划)
+- [已完成与后续计划](#已完成与后续计划)
 
 ## 技术栈
 
@@ -22,13 +22,13 @@
 | 后端 | Python 3.12 · Django 6.1 · Django REST Framework 3.18 |
 | 认证 | SimpleJWT（access 30 分钟 / refresh 7 天，轮换 + 黑名单） |
 | 数据处理 | Markdown + bleach（XSS 白名单过滤）· Pillow（图片上传） |
-| 存储 | SQLite（开发）/ PostgreSQL（生产）· Redis 缓存（生产） |
+| 存储 | SQLite（开发）/ PostgreSQL（生产）· Redis 缓存（可选，未配置时用进程内缓存） |
 | 前端 | Vue 3（组合式 API）· Vite 5 · Vue Router 4 · Pinia 2 · Axios |
 | 文档 | drf-spectacular（Swagger UI） |
 | 质量 | Django TestCase / APITestCase · GitHub Actions |
-| 部署 | Dockerfile · Docker Compose（PostgreSQL + Redis + 前后端） |
+| 部署 | Dockerfile + Gunicorn + WhiteNoise · Docker Compose（本地 PostgreSQL + Redis + 前后端） |
 
-可选扩展（注：若没有elasticresearch方法，会降级到django的q查询方式）：Elasticsearch 全文搜索、Celery 定时任务、Channels WebSocket。
+可选扩展（不装也能跑）：Elasticsearch 全文搜索（不可用时自动降级为数据库查询）、Celery 定时任务、Channels WebSocket。
 
 ## 功能一览
 
@@ -37,12 +37,12 @@
 - **认证**：注册、登录、Token 刷新、当前用户资料读写
 - **文章**：发布、列表（分页 / 关键词搜索 / 排序 / 按分类·标签·专题筛选）、详情（含渲染后的 HTML 与相关文章推荐）、删除
 - **Markdown 渲染**：服务端渲染并落库到 `content_html`，用 bleach 白名单过滤标签与属性（单元测试覆盖 `<script>` 注入用例）
-- **评论**：二级"楼中楼"评论的列表与发表，仅作者或管理员可删除
+- **评论**：二级"楼中楼"评论的列表与发表，仅评论作者本人可删除
 - **内容组织**：分类 / 标签 / 专题、按年月归档与站点统计
 - **SEO**：`sitemap.xml`、`robots.txt`、RSS 订阅
 - **其他模块**：站点配置、友情链接、个人笔记
 - **站点监控**：`scripts/monitor_agent.py` 定时上报服务器指标，后台与前端可视化展示
-- **工程化**：分级接口限流、对象级权限、Swagger 文档、GitHub Actions 单元测试、Docker Compose 一键起依赖
+- **工程化**：分级接口限流、对象级权限、55 个自动化测试、GitHub Actions CI、Gunicorn + WhiteNoise 部署配置
 
 ### 已实现但需要额外依赖才能启用
 
@@ -67,16 +67,14 @@ venv\Scripts\activate
 # macOS / Linux
 source venv/bin/activate
 
-pip install "django>=6.1" djangorestframework djangorestframework-simplejwt \
-            django-cors-headers drf-spectacular django-filter \
-            markdown bleach pillow django-redis
+pip install -r requirements.txt
 
 python manage.py migrate
 python seed.py            # 创建演示账号并灌入几篇示例文章
 python manage.py runserver
 ```
 
-> `requirements.txt` 是完整依赖清单，含上述可选扩展包。若其中某个包的版本约束与本机环境不符，以本机能跑通的版本为准。
+> 开发环境默认使用 SQLite + 进程内缓存，开箱即用；生产环境变量见下方「部署配置」。
 
 ### 前端
 
@@ -101,6 +99,19 @@ Vite 已配置 `/api`、`/media`、`/sitemap.xml`、`/robots.txt`、`/ws` 的代
 
 执行 `python seed.py` 后可用：`admin` / `admin123`（本地演示用，请勿用于任何公开环境）。
 
+### 部署配置（生产）
+
+`DJANGO_SETTINGS_MODULE=blog_backend.settings_production` 时，以下环境变量生效：
+
+| 变量 | 必填 | 说明 |
+|------|:----:|------|
+| `SECRET_KEY` | ✅ | Django 密钥，未设置时启动直接报错（不会使用默认值） |
+| `DATABASE_URL` | ✅ | PostgreSQL 连接串，如 `postgresql://user:pass@host:5432/db` |
+| `DJANGO_ALLOWED_HOSTS` | ✅ | 允许的域名，逗号分隔；Render 会自动追加 `RENDER_EXTERNAL_HOSTNAME` |
+| `CORS_ALLOWED_ORIGINS` | ✅ | 允许的前端地址，逗号分隔且带协议 |
+| `REDIS_URL` | ❌ | 配置后启用 Redis 缓存，否则退回进程内缓存 |
+| `USE_ELASTICSEARCH` | ❌ | 是否启用 ES 搜索 |
+
 ## API 一览
 
 所有接口以 `/api/` 为前缀，完整且可在线调试的版本见 Swagger UI：http://localhost:8000/api/docs/
@@ -119,9 +130,9 @@ Vite 已配置 `/api`、`/media`、`/sitemap.xml`、`/robots.txt`、`/ws` 的代
 
 | 方法 | 路径 | 说明 | 认证 |
 |------|------|------|:----:|
-| GET | `/articles/` | 列表，支持 `?page=` `?search=` `?ordering=` `?category=` `?tag=` `?series=` `?year=` `?month=` | 否 |
-| GET | `/articles/{id}/` | 详情（含渲染后 HTML、相关文章） | 否 |
-| POST | `/articles/create/` | 发布文章 | 否（待加固） |
+| GET | `/articles/` | 列表，支持 `?page=` `?search=` `?ordering=` `?category=` `?tag=` `?series=` `?year=` `?month=`；登录后 `?mine=1` 返回自己的文章（含草稿） | 否 |
+| GET | `/articles/{id}/` | 详情（含渲染后 HTML、相关文章；作者可查看自己的草稿） | 否 |
+| POST | `/articles/create/` | 发布文章或存草稿（`status=draft`）；`is_top` 仅管理员可设置 | 是 |
 | PUT / PATCH | `/articles/{id}/update/` | 编辑文章 | 是（仅作者 / 管理员） |
 | DELETE | `/articles/{id}/delete/` | 删除文章 | 是（仅作者 / 管理员） |
 | POST | `/articles/upload-image/` | 上传 Markdown 内嵌图片 | 是 |
@@ -137,7 +148,7 @@ Vite 已配置 `/api`、`/media`、`/sitemap.xml`、`/robots.txt`、`/ws` 的代
 |------|------|------|:----:|
 | GET | `/comments/article/{article_id}/` | 某篇文章的评论（含回复） | 否 |
 | POST | `/comments/create/` | 发表评论，带 `parent` 即为回复 | 是 |
-| DELETE | `/comments/{id}/delete/` | 删除评论 | 是（仅作者 / 管理员） |
+| DELETE | `/comments/{id}/delete/` | 删除评论 | 是（仅评论作者本人） |
 
 ### 站点 / 笔记 / 监控 / 系统
 
@@ -146,7 +157,7 @@ Vite 已配置 `/api`、`/media`、`/sitemap.xml`、`/robots.txt`、`/ws` 的代
 | GET | `/api/site/` `/api/site/friend-links/` | 站点配置、友情链接 | 否 |
 | GET | `/api/notes/` `/api/notes/{id}/` | 笔记列表 / 详情（私有笔记仅作者可见） | 否 |
 | POST | `/api/monitoring/report/` | 服务器指标上报（需上报 token） | Token |
-| GET | `/api/monitoring/servers/` | 监控服务器列表与最新指标 | 是 |
+| GET | `/api/monitoring/servers/` | 监控服务器列表与最新指标 | 是（仅管理员） |
 | GET | `/health/` `/readiness/` | 健康检查 / 就绪检查（含数据库连通性） | 否 |
 | GET | `/api/schema/` `/api/docs/` | OpenAPI schema / Swagger UI | 否 |
 | GET | `/sitemap.xml` `/robots.txt` | SEO | 否 |
@@ -161,7 +172,7 @@ python manage.py test apps -v 2
 python manage.py test apps.articles -v 2
 ```
 
-当前共 34 个用例，覆盖：文章模型（slug 生成与唯一性、Markdown 渲染、XSS 过滤、摘要截取、匿名作者、默认状态）、文章 API（列表分页结构、详情）、评论（模型、嵌套回复、审核状态、删除权限、内容校验）、用户（模型与注册登录接口）。
+当前共 55 个用例，覆盖：文章模型（slug 生成与唯一性、Markdown 渲染、XSS 过滤、摘要截取、匿名作者、默认状态）、文章 API（发布 / 编辑 / 删除权限、草稿可见性、置顶权限、RSS、归档、缓存一致性）、评论（模型、嵌套回复、审核状态、删除权限、跨文章回复校验）、用户（模型、注册登录、密码强度、邮箱唯一性）、监控接口权限。
 
 CI 配置见 `.github/workflows/test.yml`，推送或 PR 到 `main` 时自动执行。
 
@@ -175,7 +186,7 @@ CI 配置见 `.github/workflows/test.yml`，推送或 PR 到 `main` 时自动执
 
 ### 2. 对象级权限与作者字段的取舍
 
-列表与详情对所有人开放（`IsAuthenticatedOrReadOnly`），写操作叠加对象级校验 `IsAuthorOrStaff`——只有作者本人或管理员能改删文章与评论。
+列表与详情对已发布内容开放，写操作叠加对象级校验 `IsAuthorOrStaff`——只有作者本人或管理员能改删文章；评论删除权限更严，仅评论作者本人可删。
 
 文章与评论的 `author` 外键用 `SET_NULL` 而非级联删除：用户注销后内容仍保留，展示名回退到 `nickname` 字段。这也意味着所有读取作者名的地方都必须处理 `author` 为空的情况。
 
@@ -189,7 +200,9 @@ CI 配置见 `.github/workflows/test.yml`，推送或 PR 到 `main` 时自动执
 
 ### 5. 缓存策略
 
-文章列表按查询参数分片缓存 5 分钟，详情缓存 10 分钟（缓存命中时单独回写实时阅读量），归档与统计缓存 30 分钟至 1 小时。写操作（发布 / 编辑 / 删除 / 评论）后按前缀失效对应缓存，保证"发表即生效"。开发环境用 `LocMemCache`（零外部依赖），生产切 Redis。
+文章列表按查询参数分片缓存 5 分钟，详情缓存 10 分钟（命中时单独回写实时阅读量），归档与统计缓存 30 分钟至 1 小时。
+
+失效策略用「版本号」而不是 `delete_pattern`：列表、归档、统计各有一个版本键，写操作（发布 / 编辑 / 删除 / 评论 / 用户注销）自增版本后旧键自然失效。这样既不依赖具体缓存后端的批量删除能力，也不会像 `cache.clear()` 那样把限流计数一起清掉。配置了 `REDIS_URL` 用 Redis，否则用进程内缓存。
 
 ### 6. 阅读量原子自增与 Markdown 安全
 
@@ -228,20 +241,29 @@ Markdown 在服务端渲染后统一经 bleach 白名单过滤标签与属性，
 └── Dockerfile · docker-compose.yml · DEPLOYMENT.md
 ```
 
-## 已知限制与开发计划
+## 已完成与后续计划
 
-开发过程中记录的问题与下一步，按优先级排列：
+### 已完成的加固
 
-- [ ] **游客投稿加固**：目前匿名用户也能直接发布文章，计划改为"游客投稿落草稿 + 后台审核后发布"，并叠加更严格的匿名限流
-- [ ] **修复文章编辑接口**：`PUT / PATCH /api/articles/{id}/update/` 的缓存清理逻辑有缺陷，会导致请求异常，正在修复
-- [ ] **补充写接口测试**：现有测试集中在模型层与只读接口，缺发布 / 编辑 / 删除以及权限矩阵的用例
-- [ ] **注册接口接入密码强度校验**：复用 Django 的 `AUTH_PASSWORD_VALIDATORS`，并补邮箱唯一性校验
-- [ ] **收紧监控接口权限**：服务器指标属内部信息，计划限制为仅管理员可见
-- [ ] **整理依赖清单**：`requirements.txt` 与 `pyproject.toml` 存在重复声明和版本不一致，计划合并为单一来源并与实际环境对齐
-- [ ] **启用 WebSocket 实时评论**：安装并配置 `channels` 后打通，前端已有对应组合式函数
-- [ ] **补齐 Swagger 注解**：部分视图缺少 `serializer_class`，`/api/docs/` 中展示不完整
-- [ ] **生产环境配置统一**：统一 `DEBUG`、`ALLOWED_HOSTS` 等环境变量命名，补全静态文件与 WSGI 服务器方案
-- [ ] **真实部署**：用 Gunicorn + Nginx 部署到公网，并把线上地址补进本文档
+- [x] 修复文章编辑接口（`PUT/PATCH`）的缓存清理异常
+- [x] 收紧发布权限：仅登录用户可发布，`is_top` 仅管理员可设置，支持草稿
+- [x] 注册接入 Django 密码强度校验与邮箱唯一性校验
+- [x] 监控指标接口限制为仅管理员可读
+- [x] 修复作者注销后 RSS / 按年月归档的空值崩溃
+- [x] 修复归档接口冷缓存返回对象、热缓存返回数组的结构不一致
+- [x] 缓存失效改为版本号机制，不再用 `cache.clear()` 误清限流计数
+- [x] 依赖清单与 `pyproject.toml` 对齐，补齐 WhiteNoise / Gunicorn
+- [x] 生产配置不再内置默认 `SECRET_KEY`，`ALLOWED_HOSTS` / CORS 改为环境变量驱动
+- [x] 测试从 34 个增加到 55 个，CI 覆盖全部 app
+
+### 后续计划
+
+- [ ] 启用 WebSocket 实时评论（安装并配置 `channels`）
+- [ ] 补齐第三方登录路由与联调（GitHub / 微信客户端代码已就绪）
+- [ ] 补全 Celery 邮件模板（`templates/emails/*.html` 目前不存在）
+- [ ] 为部分视图补充 Swagger `serializer_class` 注解
+- [ ] 媒体文件迁移到对象存储（当前演示环境由 Django 提供 `media`）
+- [ ] 增加覆盖率统计与前端单元测试
 
 ## License
 

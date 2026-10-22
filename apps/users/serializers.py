@@ -37,6 +37,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             for attr, value in profile_data.items():
                 setattr(profile, attr, value)
             profile.save()
+        return instance
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)

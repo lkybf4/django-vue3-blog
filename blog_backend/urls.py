@@ -6,6 +6,8 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve as media_serve
+from django.urls import re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.http import JsonResponse
@@ -82,3 +84,9 @@ if getattr(settings, 'ENABLE_PROMETHEUS_METRICS', True):
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # 演示环境：媒体文件交给 Django 提供（WhiteNoise 只处理 static）。
+    # 正式高流量场景请改为对象存储（S3 / OSS / R2）。
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', media_serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

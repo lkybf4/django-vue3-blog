@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny
 from django.core.cache import cache
 
 from .models import Article
+from .cache import article_archive_cache_key, article_statistics_cache_key
 
 
 class ArticleArchiveView(generics.GenericAPIView):
@@ -37,7 +38,7 @@ class ArticleArchiveView(generics.GenericAPIView):
         ]
         """
         # 尝试从缓存获取
-        cache_key = 'article_archive'
+        cache_key = article_archive_cache_key('article_archive')
         cached_data = cache.get(cache_key)
         
         if cached_data:
@@ -109,7 +110,7 @@ class ArticleStatisticsView(generics.GenericAPIView):
         }
         """
         # 尝试从缓存获取
-        cache_key = 'article_statistics'
+        cache_key = article_statistics_cache_key()
         cached_data = cache.get(cache_key)
         
         if cached_data:
@@ -215,7 +216,7 @@ class ArticleArchiveByYearView(generics.GenericAPIView):
         """
         获取指定年份的文章归档
         """
-        cache_key = f'article_archive_year_{year}'
+        cache_key = article_archive_cache_key(f'article_archive_year_{year}')
         cached_data = cache.get(cache_key)
         
         if cached_data:
@@ -249,15 +250,15 @@ class ArticleArchiveByYearView(generics.GenericAPIView):
         
         # 转换为列表格式
         result = sorted(months_data.values(), key=lambda x: x['month'], reverse=True)
-        
-        # 写入缓存（1小时）
-        cache.set(cache_key, result, 3600)
-        
-        return Response({
+
+        payload = {
             'year': year,
             'total_count': articles.count(),
-            'months': result
-        })
+            'months': result,
+        }
+        # 缓存完整响应体，避免冷/热缓存返回结构不一致
+        cache.set(cache_key, payload, 3600)
+        return Response(payload)
 
 
 class ArticleArchiveByMonthView(generics.GenericAPIView):
@@ -270,13 +271,13 @@ class ArticleArchiveByMonthView(generics.GenericAPIView):
         """
         获取指定年月的文章列表
         """
-        cache_key = f'article_archive_{year}_{month}'
+        cache_key = article_archive_cache_key(f'article_archive_{year}_{month}')
         cached_data = cache.get(cache_key)
         
         if cached_data:
             return Response(cached_data)
         
-        articles = Article.objects.filter(
+        articles = Article.objects.select_related('author').filter(
             status='published',
             created_at__year=year,
             created_at__month=month
@@ -289,17 +290,17 @@ class ArticleArchiveByMonthView(generics.GenericAPIView):
                 'summary': article.summary,
                 'created_at': article.created_at.isoformat(),
                 'views': article.views,
-                'author': article.author.username
+                'author': article.author_name
             }
             for article in articles
         ]
         
-        # 写入缓存（1小时）
-        cache.set(cache_key, result, 3600)
-        
-        return Response({
+        payload = {
             'year': year,
             'month': month,
             'total_count': len(result),
-            'articles': result
-        })
+            'articles': result,
+        }
+        # 缓存完整响应体，避免冷/热缓存返回结构不一致
+        cache.set(cache_key, payload, 3600)
+        return Response(payload)

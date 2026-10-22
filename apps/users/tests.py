@@ -96,3 +96,44 @@ class UserAPITest(APITestCase):
         """测试获取用户信息（未登录）"""
         response = self.client.get(self.profile_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class RegisterSecurityTest(APITestCase):
+    """注册接口的密码强度与邮箱唯一性校验"""
+
+    def setUp(self):
+        self.url = '/api/auth/register/'
+
+    def _payload(self, username, email, password):
+        return {
+            'username': username,
+            'email': email,
+            'password': password,
+            'password2': password,
+        }
+
+    def test_common_password_rejected(self):
+        response = self.client.post(
+            self.url,
+            self._payload('weak_user', 'weak@example.com', '12345678'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicate_email_rejected(self):
+        User.objects.create_user(
+            username='first', email='dup@example.com', password='Str0ngPass!x')
+        response = self.client.post(
+            self.url,
+            self._payload('second', 'dup@example.com', 'Str0ngPass!x'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_strong_password_accepted(self):
+        response = self.client.post(
+            self.url,
+            self._payload('strong_user', 'strong@example.com', 'Str0ngPass!x'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

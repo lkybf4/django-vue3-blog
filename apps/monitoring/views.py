@@ -1,5 +1,5 @@
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,7 +10,7 @@ from .serializers import MonitorServerSerializer, MonitorMetricSerializer, Metri
 class MonitorServerListView(generics.ListAPIView):
     """监控服务器列表（含最新指标）"""
     serializer_class = MonitorServerSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     pagination_class = None
 
     def get_queryset(self):
@@ -20,7 +20,7 @@ class MonitorServerListView(generics.ListAPIView):
 class MonitorMetricHistoryView(generics.ListAPIView):
     """某服务器历史指标"""
     serializer_class = MonitorMetricSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
     pagination_class = None
 
     def get_queryset(self):
@@ -69,7 +69,7 @@ class MetricReportView(APIView):
 
 class LocalMetricsView(APIView):
     """本机实时指标（Django 服务器）"""
-    permission_classes = [AllowAny]
+    permission_classes = [IsAdminUser]
 
     def get(self, request):
         try:

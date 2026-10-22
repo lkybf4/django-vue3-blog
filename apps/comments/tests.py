@@ -131,3 +131,37 @@ class CommentAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         child = Comment.objects.latest('id')
         self.assertEqual(child.parent, parent)
+
+
+class CommentParentValidationTest(APITestCase):
+    """回复必须挂在同一篇文章下，且只允许二级"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='parent_user', password='TestPass123!')
+        self.article_a = Article.objects.create(
+            title='文章A', content='a', author=self.user, status='published')
+        self.article_b = Article.objects.create(
+            title='文章B', content='b', author=self.user, status='published')
+        self.client.force_authenticate(user=self.user)
+
+    def test_cannot_reply_across_articles(self):
+        parent = Comment.objects.create(
+            article=self.article_a, author=self.user, content='A 的评论')
+        response = self.client.post('/api/comments/create/', {
+            'article': self.article_b.id,
+            'parent': parent.id,
+            'content': '跨文章回复',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_only_two_levels_supported(self):
+        parent = Comment.objects.create(
+            article=self.article_a, author=self.user, content='一级')
+        child = Comment.objects.create(
+            article=self.article_a, parent=parent, author=self.user, content='二级')
+        response = self.client.post('/api/comments/create/', {
+            'article': self.article_a.id,
+            'parent': child.id,
+            'content': '三级回复',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

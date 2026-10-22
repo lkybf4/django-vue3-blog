@@ -25,8 +25,15 @@ const tools = [
  { id: 'timestamp', name: '时间戳转换', icon: '⏰', category: '辅助工具' },
  { id: 'password', name: '密码生成器', icon: '🔑', category: '安全工具' },
 ];
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+ '&': '&amp;',
+ '<': '&lt;',
+ '>': '&gt;',
+ '"': '&quot;',
+ "'": '&#39;',
+}[ch]));
 const markdownPreview = computed(() => {
- let text = markdownInput.value;
+ let text = escapeHtml(markdownInput.value);
  text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
  text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
  text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');

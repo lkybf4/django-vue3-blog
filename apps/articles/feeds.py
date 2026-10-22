@@ -19,12 +19,10 @@ class LatestArticlesFeed(Feed):
         return item.summary or item.content[:200]
 
     def item_link(self, item):
-        if item.slug:
-            return reverse('article-detail', args=[item.slug])
-        return f'/article/{item.id}/'
+        return reverse('article-detail', args=[item.id])
 
     def item_pubdate(self, item):
         return item.created_at
 
     def item_author_name(self, item):
-        return item.author.username
+        return item.author_name

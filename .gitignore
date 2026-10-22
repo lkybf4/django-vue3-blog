@@ -25,6 +25,7 @@ logs/
 # 环境变量
 .env
 .env.local
+cloudflared.exe
 
 # IDE
 .idea/
