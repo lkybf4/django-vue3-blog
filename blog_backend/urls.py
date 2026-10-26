@@ -26,7 +26,7 @@ sitemaps = {
 
 def api_root(request):
     return JsonResponse({
-        'message': '欢迎来到博客系统API',
+        'message': '欢迎使用文栈 Wenstack API',
         'version': '2.0.0',
         'available_endpoints': {
             'admin': '/admin/',

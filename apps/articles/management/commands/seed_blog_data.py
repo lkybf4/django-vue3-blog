@@ -39,11 +39,11 @@ class Command(BaseCommand):
             pk=1,
             defaults={
                 'site_name': 'self-blog',
-                'site_description': '一个使用 Django + Vue3 搭建的个人技术博客，分享编程学习心得',
+                'site_description': '文栈 · 面向技术作者的内容发布平台',
                 'site_keywords': 'Python,Django,Vue3,博客,技术分享,容器化,监控',
                 'author_name': '技术博主',
                 'author_bio': '热爱技术，专注于 Python、Django、Vue3 等技术栈',
-                'notice': '🎉 欢迎来到我的技术博客！\n📝 这里分享 Python、Django、Vue3 等技术文章\n💡 持续更新中，敬请关注',
+                'notice': '🎉 欢迎来到文栈！\n📝 这里分享 Python、Django、Vue3 等技术内容\n💡 持续更新中，敬请关注',
                 'start_date': date(2018, 1, 1),
                 'github_url': 'https://github.com/Hopetree/izone',
             }

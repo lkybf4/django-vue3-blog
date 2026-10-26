@@ -3,7 +3,7 @@ from django.db import models
 
 class SiteConfig(models.Model):
     """站点配置（单例）"""
-    site_name = models.CharField('站点名称', max_length=100, default='TendCode')
+    site_name = models.CharField('站点名称', max_length=100, default='文栈 Wenstack')
     site_description = models.TextField('站点描述', blank=True)
     site_keywords = models.CharField('关键词', max_length=200, blank=True)
     author_name = models.CharField('作者名称', max_length=50, default='技术博主')

@@ -1,6 +1,6 @@
 """
 Django settings for blog_backend project.
-个人博客系统 - 开发环境配置
+文栈 Wenstack - 开发环境配置
 """
 
 from pathlib import Path
@@ -234,8 +234,8 @@ CACHE_TTL = {
 # drf-spectacular API 文档配置
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': '个人博客 API',
-    'DESCRIPTION': '基于 Django + DRF + Vue3 的个人博客系统 API 文档',
+    'TITLE': '文栈 Wenstack API',
+    'DESCRIPTION': '文栈（技术内容发布平台）API 文档，基于 Django + DRF',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,

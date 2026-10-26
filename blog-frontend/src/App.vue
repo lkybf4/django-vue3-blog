@@ -20,7 +20,7 @@ const handleLogout = () => {
 const searchQuery = ref('')
 const showSearch = ref(false)
 const showMenu = ref(false)
-const siteName = ref('我的博客')
+const siteName = ref('文栈 Wenstack')
 const navbarVisible = ref(true)
 const lastScrollY = ref(0)
 const showBackToTop = ref(false)
@@ -29,7 +29,7 @@ const { setSeo } = useSeo()
 onMounted(async () => {
   try {
     const res = await getSiteConfig()
-    siteName.value = res.data.site_name || '我的博客'
+    siteName.value = res.data.site_name || '文栈 Wenstack'
     setSeo({
       title: res.data.site_name,
       description: res.data.site_description,

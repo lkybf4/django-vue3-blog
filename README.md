@@ -1,8 +1,8 @@
-# 个人博客系统 · Django + DRF + Vue 3
+# 文栈 Wenstack · 技术内容发布平台
 
 [![Tests](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml/badge.svg)](https://github.com/lkybf4/django-vue3-blog/actions/workflows/test.yml)
 
-一个前后端分离的个人博客系统。后端用 Django REST Framework 提供 API，前端用 Vue 3 + Vite 单独部署，两者通过 JWT 认证通信。
+文栈是一个面向技术作者的内容发布平台：支持文章与专栏、分类标签、嵌套评论、全文搜索、归档统计与多作者权限控制。后端用 Django REST Framework 提供 API，前端用 Vue 3 + Vite 单独部署，两者通过 JWT 认证通信。
 
 ## 目录
 
