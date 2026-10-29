@@ -70,7 +70,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 python manage.py migrate
-python seed.py            # 创建演示账号并灌入几篇示例文章
+python seed.py            # 测试
 python manage.py runserver
 ```
 
@@ -196,7 +196,7 @@ CI 配置见 `.github/workflows/test.yml`，推送或 PR 到 `main` 时自动执
 
 ### 4. 全文搜索的降级设计
 
-搜索优先走 Elasticsearch（多字段加权、模糊匹配），但 ES 被设计成可选依赖：未配置、连接失败或索引未建立时，自动降级为数据库查询，接口契约保持不变，只通过返回体里的 `engine` 字段（`elasticsearch` / `database`）暴露实际走的是哪条链路。文档注册也做了可用性探测——ES 连不上就干脆不注册索引，避免启动即报错。
+搜索优先走 Elasticsearch（多字段加权、模糊匹配），但 ES 被设计成可选依赖：未配置、连接失败或索引未建立时，自动降级为数据库查询，接口契约保持不变，只通过返回体里的 `engine` 字段（`elasticsearch` / `database`）暴露实际走的是哪条链路。
 
 ### 5. 缓存策略
 

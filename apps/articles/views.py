@@ -170,6 +170,10 @@ class ArticleCreateView(generics.CreateAPIView):
         serializer.save()
         bump_article_list_cache()
         bump_article_aggregate_cache()
+    def perform_create(self, serializer):
+        serializer.save()
+        # 用最暴力的方式清空所有缓存，保证发布后立刻能看到最新列表
+        cache.clear() 
 
 
 class ArticleUpdateView(generics.UpdateAPIView):
@@ -182,6 +186,10 @@ class ArticleUpdateView(generics.UpdateAPIView):
         cache.delete(f'article_detail:{article.id}')
         bump_article_list_cache()
         bump_article_aggregate_cache()
+    def perform_update(self, serializer):
+        article = serializer.save()
+        # 直接清空所有缓存（包含详情和列表）
+        cache.clear() 
 
 
 class ArticleDeleteView(generics.DestroyAPIView):
@@ -194,4 +202,7 @@ class ArticleDeleteView(generics.DestroyAPIView):
         cache.delete(f'article_detail:{instance_id}')
         bump_article_list_cache()
         bump_article_aggregate_cache()
-     
+    def perform_destroy(self, instance):
+        instance.delete()
+        # 直接清空所有缓存
+        cache.clear()

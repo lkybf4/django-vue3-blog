@@ -37,6 +37,12 @@ const { connected, typingUsers, connect, sendComment: wsSendComment, sendTyping 
 )
 
 watch(connected, (v) => { wsStatus.value = v ? 'connected' : 'disconnected' })
+// 监听路由参数变化，如果 id 变了，立刻重新拉取最新文章
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    loadArticle(newId) // 调用你现有的获取文章数据的函数
+  }
+}, { immediate: true })
 
 const currentIndex = computed(() => {
   if (!article.value || !allArticles.value.length) return -1
